@@ -3,10 +3,8 @@ import yt_dlp
 import os
 import tempfile
 
-# 1. Configuración de la página
 st.set_page_config(page_title="Música para Mamá", page_icon="🎵", layout="centered")
 
-# 2. Inyección de CSS
 st.markdown("""
 <style>
     #MainMenu {visibility: hidden;}
@@ -50,10 +48,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 3. Interfaz de Usuario
 st.markdown("<div class='titulo-mama'>El descargador de música de Mamá 🎵</div>", unsafe_allow_html=True)
 
-# SOLUCIÓN 1: Le damos un nombre pero usamos label_visibility="collapsed" para ocultarlo
 url = st.text_input(
     "Enlace de YouTube", 
     placeholder="Pega aquí el enlace de tu canción...", 
@@ -62,17 +58,28 @@ url = st.text_input(
 
 st.write("") 
 
-# 4. Lógica de descarga
 if st.button("¡Descargar Música!"):
     if url:
+        # 1. Comprobación de seguridad: ¿Existen las cookies en los secretos?
+        if "YOUTUBE_COOKIES" not in st.secrets:
+            st.error("🔧 ¡Aviso para el desarrollador! Faltan las cookies en los Secrets de Streamlit.")
+            st.stop()
+
         with st.spinner("Buscando tu canción... un momento, por favor ⏳"):
             try:
+                # 2. Carpeta temporal para guardar las cookies y el MP3
                 with tempfile.TemporaryDirectory() as temp_dir:
                     
-                    # SOLUCIÓN 2: Añadimos trucos antibloqueo a yt-dlp
+                    # 3. Fabricamos el archivo de cookies sobre la marcha
+                    cookie_path = os.path.join(temp_dir, "cookies.txt")
+                    with open(cookie_path, "w", encoding="utf-8") as f:
+                        f.write(st.secrets["YOUTUBE_COOKIES"])
+                    
+                    # 4. Le pasamos el archivo a yt-dlp
                     ydl_opts = {
                         'format': 'bestaudio/best',
                         'outtmpl': os.path.join(temp_dir, 'cancion.%(ext)s'),
+                        'cookiefile': cookie_path, # <--- LA MAGIA ESTÁ AQUÍ
                         'postprocessors': [{
                             'key': 'FFmpegExtractAudio',
                             'preferredcodec': 'mp3',
@@ -80,13 +87,7 @@ if st.button("¡Descargar Música!"):
                         }],
                         'quiet': True,
                         'no_warnings': True,
-                        # Engañamos a YouTube haciéndonos pasar por un móvil Android
-                        'extractor_args': {
-                            'youtube': {
-                                'player_client': ['android', 'web']
-                            }
-                        },
-                        'nocheckcertificate': True # Evita problemas de seguridad en el servidor
+                        'nocheckcertificate': True
                     }
 
                     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -110,11 +111,10 @@ if st.button("¡Descargar Música!"):
                                 type="primary" 
                             )
                         else:
-                            st.error("¡Ups! Parece que el enlace no es correcto. Inténtalo de nuevo, por favor ❤️")
+                            st.error("¡Ups! Parece que el enlace no es correcto. Inténtalo de nuevo ❤️")
             except Exception as e:
-                st.error("¡Ups! YouTube nos ha bloqueado temporalmente o el enlace es privado. Inténtalo con otra canción ❤️")
-                # Imprimimos el error real en la consola de Streamlit para que tú lo veas, 
-                # pero tu madre solo verá el mensaje rojo de arriba.
-                print(f"Error técnico: {e}")
+                # Si falla, te imprimimos a ti el error técnico por consola, y a tu madre un texto amable
+                print(f"Detalle del error: {e}")
+                st.error("¡Ups! No hemos podido descargar esta canción. Comprueba el enlace o prueba con otra ❤️")
     else:
         st.warning("Por favor, pega un enlace primero para poder buscarla. 😊")
