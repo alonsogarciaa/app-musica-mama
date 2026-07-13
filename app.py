@@ -75,8 +75,8 @@ if st.button("¡Descargar Música!"):
                     with open(cookie_path, "w", encoding="utf-8") as f:
                         f.write(st.secrets["YOUTUBE_COOKIES"])
                     # 4. Le pasamos el archivo a yt-dlp
-                    ydl_opts = {
-                        'format': 'best', # <--- EL CAMBIO ESTÁ AQUÍ: Método a prueba de balas
+                   ydl_opts = {
+                        'format': 'best',
                         'outtmpl': os.path.join(temp_dir, 'cancion.%(ext)s'),
                         'cookiefile': cookie_path,
                         'postprocessors': [{
@@ -87,7 +87,11 @@ if st.button("¡Descargar Música!"):
                         'quiet': True,
                         'no_warnings': True,
                         'nocheckcertificate': True,
-                        'ignoreerrors': True # Evita que se cuelgue por pequeños fallos de red
+                        'ignoreerrors': True,
+                        # Nueva configuración para evitar restricciones geográficas
+                        'geo_bypass': True,
+                        'geo_bypass_country': 'ES',
+                        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
                     }
 
                     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
