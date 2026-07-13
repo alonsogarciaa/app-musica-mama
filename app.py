@@ -74,12 +74,11 @@ if st.button("¡Descargar Música!"):
                     cookie_path = os.path.join(temp_dir, "cookies.txt")
                     with open(cookie_path, "w", encoding="utf-8") as f:
                         f.write(st.secrets["YOUTUBE_COOKIES"])
-                    
                     # 4. Le pasamos el archivo a yt-dlp
                     ydl_opts = {
-                        'format': 'bestaudio/best',
+                        'format': 'best', # <--- EL CAMBIO ESTÁ AQUÍ: Método a prueba de balas
                         'outtmpl': os.path.join(temp_dir, 'cancion.%(ext)s'),
-                        'cookiefile': cookie_path, # <--- LA MAGIA ESTÁ AQUÍ
+                        'cookiefile': cookie_path,
                         'postprocessors': [{
                             'key': 'FFmpegExtractAudio',
                             'preferredcodec': 'mp3',
@@ -87,7 +86,8 @@ if st.button("¡Descargar Música!"):
                         }],
                         'quiet': True,
                         'no_warnings': True,
-                        'nocheckcertificate': True
+                        'nocheckcertificate': True,
+                        'ignoreerrors': True # Evita que se cuelgue por pequeños fallos de red
                     }
 
                     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
