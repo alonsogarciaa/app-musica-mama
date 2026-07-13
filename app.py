@@ -3,28 +3,25 @@ import yt_dlp
 import os
 import tempfile
 
-# 1. Configuración de la página (Debe ser la primera instrucción)
+# 1. Configuración de la página
 st.set_page_config(page_title="Música para Mamá", page_icon="🎵", layout="centered")
 
-# 2. Inyección de CSS para diseño móvil, limpio y amigable
+# 2. Inyección de CSS
 st.markdown("""
 <style>
-    /* Ocultar el menú superior y el pie de página por defecto de Streamlit */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
     
-    /* Título principal */
     .titulo-mama {
         text-align: center;
-        color: #E83E8C; /* Rosa suave/fuerte */
+        color: #E83E8C;
         font-family: 'Arial', sans-serif;
         font-size: 32px;
         font-weight: bold;
         margin-bottom: 20px;
     }
     
-    /* Hacer el input de texto más grande */
     .stTextInput input {
         font-size: 18px !important;
         padding: 15px !important;
@@ -32,7 +29,6 @@ st.markdown("""
         border: 2px solid #F0B2D4 !important;
     }
     
-    /* Estilizar TODOS los botones para que sean gigantes y fáciles de pulsar */
     .stButton > button, div[data-testid="stDownloadButton"] > button {
         width: 100%;
         border-radius: 20px;
@@ -42,7 +38,6 @@ st.markdown("""
         transition: 0.3s;
     }
     
-    /* Botón de buscar (Rosa) */
     .stButton > button {
         background-color: #E83E8C;
         color: white;
@@ -58,20 +53,23 @@ st.markdown("""
 # 3. Interfaz de Usuario
 st.markdown("<div class='titulo-mama'>El descargador de música de Mamá 🎵</div>", unsafe_allow_html=True)
 
-# Campo de texto sin etiqueta visible para mantenerlo limpio
-url = st.text_input("", placeholder="Pega aquí el enlace de tu canción...")
+# SOLUCIÓN 1: Le damos un nombre pero usamos label_visibility="collapsed" para ocultarlo
+url = st.text_input(
+    "Enlace de YouTube", 
+    placeholder="Pega aquí el enlace de tu canción...", 
+    label_visibility="collapsed"
+)
 
-st.write("") # Espacio en blanco
+st.write("") 
 
 # 4. Lógica de descarga
 if st.button("¡Descargar Música!"):
     if url:
         with st.spinner("Buscando tu canción... un momento, por favor ⏳"):
             try:
-                # Usamos un directorio temporal para no saturar el servidor
                 with tempfile.TemporaryDirectory() as temp_dir:
-                    # Forzamos que el archivo de salida se llame siempre "cancion" para evitar 
-                    # problemas de caracteres raros en el sistema operativo.
+                    
+                    # SOLUCIÓN 2: Añadimos trucos antibloqueo a yt-dlp
                     ydl_opts = {
                         'format': 'bestaudio/best',
                         'outtmpl': os.path.join(temp_dir, 'cancion.%(ext)s'),
@@ -81,17 +79,21 @@ if st.button("¡Descargar Música!"):
                             'preferredquality': '192',
                         }],
                         'quiet': True,
-                        'no_warnings': True
+                        'no_warnings': True,
+                        # Engañamos a YouTube haciéndonos pasar por un móvil Android
+                        'extractor_args': {
+                            'youtube': {
+                                'player_client': ['android', 'web']
+                            }
+                        },
+                        'nocheckcertificate': True # Evita problemas de seguridad en el servidor
                     }
 
                     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                        # Extraer info para obtener el título real de la canción
                         info_dict = ydl.extract_info(url, download=True)
                         titulo_real = info_dict.get('title', 'Cancion_Descargada')
                         
-                        # Limpiar el título de caracteres problemáticos para el nombre del archivo
                         titulo_limpio = "".join(x for x in titulo_real if x.isalnum() or x in " -_")
-                        
                         archivo_mp3 = os.path.join(temp_dir, "cancion.mp3")
 
                         if os.path.exists(archivo_mp3):
@@ -100,18 +102,19 @@ if st.button("¡Descargar Música!"):
 
                             st.success("¡Canción encontrada y lista! 🎉")
                             
-                            # Botón de descarga final (Streamlit lo coloreará por defecto o aplicará nuestro CSS)
                             st.download_button(
                                 label="Guardar canción en mi móvil 📥",
                                 data=audio_bytes,
                                 file_name=f"{titulo_limpio}.mp3",
                                 mime="audio/mpeg",
-                                type="primary" # Lo hace destacar más
+                                type="primary" 
                             )
                         else:
                             st.error("¡Ups! Parece que el enlace no es correcto. Inténtalo de nuevo, por favor ❤️")
             except Exception as e:
-                # Mensaje genérico de error para no confundirla con códigos
-                st.error("¡Ups! Parece que el enlace no es correcto o es privado. Inténtalo de nuevo, por favor ❤️")
+                st.error("¡Ups! YouTube nos ha bloqueado temporalmente o el enlace es privado. Inténtalo con otra canción ❤️")
+                # Imprimimos el error real en la consola de Streamlit para que tú lo veas, 
+                # pero tu madre solo verá el mensaje rojo de arriba.
+                print(f"Error técnico: {e}")
     else:
         st.warning("Por favor, pega un enlace primero para poder buscarla. 😊")
